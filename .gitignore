@@ -2,3 +2,5 @@
 after-section*
 
 node_modules/
+
+*.env
