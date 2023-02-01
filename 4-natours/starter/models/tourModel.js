@@ -1,13 +1,12 @@
 const mongoose = require('mongoose');
 const slugify = require('slugify');
-const validator = require('validator');
 
 const tourSchema = new mongoose.Schema(
     {
         name: {
             type: String,
             required: [true, 'A tour must have a name'],
-            unique: true,
+            unique: true, // unique is not a validator
             trim: true,
             minlength: [8, 'Tour name must have equal or more than 8 characters'],
             maxlength: [50, 'Tour name must have equal or less than 50 characters'],
@@ -50,7 +49,7 @@ const tourSchema = new mongoose.Schema(
             validate: {
                 // 'val' refers to current field
                 validator: function (val) {
-                    // 'this' refers to current document, but only to a newly creating document, which means this validator doesn't work (will always return false) when updating
+                    // 'this' refers to current document, but only apply to a newly creating document, which means this validator doesn't work (will always return false) when updating
                     return val < this.price;
                 },
                 message: 'Discount price must be below original price',
