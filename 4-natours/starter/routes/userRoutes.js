@@ -4,6 +4,7 @@ const {
     createUser,
     getUser,
     updateUser,
+    getMe,
     updateMe,
     deleteUser,
     deleteMe,
@@ -15,19 +16,25 @@ const {
     forgetPassword,
     resetPassword,
     updatePassword,
+    restrictTo,
 } = require('../controllers/authController');
 
 const router = express.Router();
 
 router.post('/signup', signup);
 router.post('/login', login);
-
 router.post('/forgetPassword', forgetPassword);
 router.patch('/resetPassword/:token', resetPassword);
-router.patch('/updatePassword', protect, updatePassword);
 
-router.patch('/updateMe', protect, updateMe);
-router.delete('/deleteMe', protect, deleteMe);
+// Because middlewares run in sequence, so
+router.use(protect); // Then all of the routes below this line will first run a protect
+
+router.patch('/updatePassword', updatePassword);
+router.get('/me', getMe, getUser);
+router.patch('/updateMe', updateMe);
+router.delete('/deleteMe', deleteMe);
+
+router.use(restrictTo('admin')); // Only administrator can perform these below...
 
 router.route('/').get(getAllUsers).post(createUser);
 router.route('/:id').get(getUser).patch(updateUser).delete(deleteUser);

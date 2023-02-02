@@ -2,34 +2,22 @@ const User = require('../models/userModel');
 const AppError = require('../utils/appError');
 const catchAsyncError = require('../utils/catchAsyncError');
 const filterObj = require('../utils/filterObject');
+const { deleteOne, updateOne, getOne, getAll } = require('./handlerFactory');
 
-exports.getAllUsers = catchAsyncError(async (req, res, next) => {
-    const users = await User.find();
+exports.getAllUsers = getAll(User);
+exports.getUser = getOne(User);
+exports.updateUser = updateOne(User);
+exports.deleteUser = deleteOne(User);
 
-    // Send response
-    res.status(200).json({
-        status: 'success',
-        results: users.length,
-        data: { users },
-    });
-});
-
-exports.getUser = (req, res) => {
-    res.status(500).json({
-        status: 'error',
-        message: 'No',
-    });
+exports.getMe = (req, res, next) => {
+    req.params.id = req.user._id;
+    next();
 };
+
 exports.createUser = (req, res) => {
     res.status(500).json({
         status: 'error',
-        message: 'No',
-    });
-};
-exports.updateUser = (req, res) => {
-    res.status(500).json({
-        status: 'error',
-        message: 'No',
+        message: 'This route is not defined! Please use /signup instead.',
     });
 };
 
@@ -53,13 +41,6 @@ exports.updateMe = catchAsyncError(async (req, res, next) => {
         data: { user: updatedUser },
     });
 });
-
-exports.deleteUser = (req, res) => {
-    res.status(500).json({
-        status: 'error',
-        message: 'No',
-    });
-};
 
 exports.deleteMe = catchAsyncError(async (req, res, next) => {
     await User.findByIdAndUpdate(req.user._id, { active: false });
