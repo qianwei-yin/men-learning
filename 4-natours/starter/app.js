@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
@@ -10,10 +11,22 @@ const AppError = require('./utils/appError');
 const globalErrorHandler = require('./controllers/errorController');
 const tourRouter = require('./routes/tourRoutes');
 const userRouter = require('./routes/userRoutes');
+const reviewRouter = require('./routes/reviewRoutes');
 
 const app = express();
 
+app.set('view engine', 'pug');
+app.set('views', path.join(__dirname, 'views'));
+
 // 1) Global Middlewares
+////////// Serving static files in Express,
+/*
+Then go to domain/overview.html
+But why not domain/public/overview.html? Because when go to a route that doesn't exist in our defined routes, it will go to the public folder (since we USE it below), and then set the public folder as the root.
+*/
+// app.use(express.static(`${__dirname}/public`));
+app.use(express.static(path.join(__dirname, 'public')));
+
 ////////// Set security HTTP headers
 app.use(helmet());
 
@@ -48,13 +61,6 @@ app.use(
     })
 );
 
-////////// Serving static files in Express,
-/*
-Then go to domain/overview.html
-But why not domain/public/overview.html? Because when go to a route that doesn't exist in our defined routes, it will go to the public folder (since we USE it below), and then set the public folder as the root.
-*/
-app.use(express.static(`${__dirname}/public`));
-
 ////////// Testing middleware
 app.use((req, res, next) => {
     // console.log(req.headers);
@@ -62,6 +68,10 @@ app.use((req, res, next) => {
 });
 
 // 3) Routes
+app.get('/', (req, res) => {
+    res.status(200).render('base');
+});
+
 /* version 1
 app.get('/api/v1/tours', getAllTours);
 app.get('/api/v1/tours/:id', getTour);
@@ -79,6 +89,7 @@ app.route('/api/v1/users/:id').get(getUser).patch(updateUser).delete(deleteUser)
 /* version 3 */
 app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/users', userRouter);
+app.use('/api/v1/reviews', reviewRouter);
 
 // If hits an undefined route:
 // Must must must place this as the last route

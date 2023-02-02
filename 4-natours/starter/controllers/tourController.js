@@ -1,36 +1,15 @@
 const Tour = require('../models/tourModel');
-const APIFeatures = require('../utils/apiFeatures');
 const AppError = require('../utils/appError');
 const catchAsyncError = require('../utils/catchAsyncError');
-
-// data from hard coded
-// const tours = JSON.parse(fs.readFileSync(`${__dirname}/../dev-data/data/tours-simple.json`));
-
-// MongoDB will automatically check invalid id
-// exports.checkId = (req, res, next, val) => {
-//     const tour = tours.find((el) => el.id === req.params.id * 1);
-//     if (!tour) {
-//         return res.status(404).json({
-//             status: 'fail',
-//             message: 'Invalid ID',
-//         });
-//     }
-//     next();
-// };
-
-// exports.checkBody = (req, res, next) => {
-//     console.log(req.body);
-//     if (!req.body.name || !req.body.price) {
-//         // 400 is 'BAD REQUEST'
-//         return res.status(400).json({
-//             status: 'fail',
-//             message: 'Must have name and price property',
-//         });
-//     }
-//     next();
-// };
+const { updateOne, deleteOne, createOne, getOne, getAll } = require('./handlerFactory');
 
 // 2) Routes Handlers
+exports.getAllTours = getAll(Tour);
+exports.getTour = getOne(Tour, { path: 'reviews' });
+exports.createTour = createOne(Tour);
+exports.updateTour = updateOne(Tour);
+exports.deleteTour = deleteOne(Tour);
+
 exports.aliasTopTours = (req, res, next) => {
     req.query.limit = '5';
     req.query.sort = '-ratingsAverage,price';
@@ -39,74 +18,6 @@ exports.aliasTopTours = (req, res, next) => {
     // This middleware does not return response, but others below do. So this one need next() according to the request-response cycle.
     next();
 };
-
-exports.getAllTours = catchAsyncError(async (req, res, next) => {
-    // Get query
-    const features = new APIFeatures(Tour.find(), req.query).filter().sort().limitFields().paginate();
-    // Execute query
-    const tours = await features.queryMong;
-
-    // Send response
-    res.status(200).json({
-        status: 'success',
-        results: tours.length,
-        data: { tours },
-    });
-});
-
-exports.getTour = catchAsyncError(async (req, res, next) => {
-    // Tour.findOne({_id: req.params.id})
-    const tour = await Tour.findById(req.params.id);
-
-    // If we pass in a valid ID (by changing a character in a real existing ID), then this is not an error, so we have to catch it.
-    if (!tour) {
-        return next(new AppError('No tour found with the ID', 404));
-    }
-
-    res.status(200).json({
-        status: 'success',
-        data: { tour },
-    });
-});
-
-exports.createTour = catchAsyncError(async (req, res, next) => {
-    const newTour = await Tour.create(req.body);
-    res.status(201).json({
-        status: 'success',
-        data: { tour: newTour },
-    });
-});
-
-exports.updateTour = catchAsyncError(async (req, res, next) => {
-    const tour = await Tour.findByIdAndUpdate(req.params.id, req.body, {
-        new: true, // return the modified document rather than the original
-        runValidators: true,
-    });
-
-    // If we pass in a valid ID (by changing a character in a real existing ID), then this is not an error, it will return 200 with data is null, so we have to catch it.
-    if (!tour) {
-        return next(new AppError('No tour found with the ID', 404));
-    }
-
-    res.status(200).json({
-        status: 'success',
-        data: { tour },
-    });
-});
-
-exports.deleteTour = catchAsyncError(async (req, res, next) => {
-    const tour = await Tour.findByIdAndDelete(req.params.id);
-
-    if (!tour) {
-        return next(new AppError('No tour found with the ID', 404));
-    }
-
-    // 204 is 'NO CONTENT'
-    res.status(204).json({
-        status: 'success',
-        data: null,
-    });
-});
 
 exports.getTourStats = catchAsyncError(async (req, res, next) => {
     const stats = await Tour.aggregate([
@@ -154,5 +65,64 @@ exports.getMonthlyPlan = catchAsyncError(async (req, res, next) => {
     res.status(200).json({
         status: 'success',
         data: monthlyPlan,
+    });
+});
+
+// /tours-within/:distance/center/:latlon/unit/:unit
+// 47.582999, -122.225382
+exports.getToursWithin = catchAsyncError(async (req, res, next) => {
+    const { distance, latlon, unit } = req.params;
+    const [lat, lon] = latlon.split(',');
+
+    const radius = unit === 'mi' ? distance / 3963.2 : distance / 6378.1;
+
+    if (!lat || !lon) {
+        return next(new AppError('Please provide latitude and longitude in the format lat,lon', 400));
+    }
+
+    const tours = await Tour.find({
+        startLocation: {
+            $geoWithin: {
+                $centerSphere: [[lon, lat], radius],
+            },
+        },
+    });
+
+    res.status(200).json({
+        status: 'success',
+        results: tours.length,
+        data: { data: tours },
+    });
+});
+
+exports.getDistances = catchAsyncError(async (req, res, next) => {
+    const { latlon, unit } = req.params;
+    const [lat, lon] = latlon.split(',');
+
+    const multiplier = unit === 'mi' ? 0.000621371 : 0.001;
+
+    if (!lat || !lon) {
+        return next(new AppError('Please provide latitude and longitude in the format lat,lon', 400));
+    }
+
+    const distances = await Tour.aggregate([
+        {
+            $geoNear: {
+                near: {
+                    type: 'Point',
+                    coordinates: [lon * 1, lat * 1],
+                },
+                distanceField: 'distance', // return unit in meters
+                distanceMultiplier: multiplier,
+            },
+        },
+        {
+            $project: { distance: 1, name: 1 },
+        },
+    ]);
+
+    res.status(200).json({
+        status: 'success',
+        data: { data: distances },
     });
 });
