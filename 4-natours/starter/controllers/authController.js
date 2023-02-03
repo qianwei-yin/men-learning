@@ -70,6 +70,8 @@ exports.protect = catchAsyncError(async (req, res, next) => {
     let token;
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         token = req.headers.authorization.split(' ')[1];
+    } else if (req.cookies.jwt) {
+        token = req.cookies.jwt;
     }
 
     if (!token) {
@@ -97,6 +99,30 @@ exports.protect = catchAsyncError(async (req, res, next) => {
 
     // Then grant access to protected routes
     req.user = stillUser; // If we want some info be passed to next middleware, just pass it like so
+    next();
+});
+
+// Only for renderring pages, won't return errors
+exports.isLoggedIn = catchAsyncError(async (req, res, next) => {
+    if (req.cookies.jwt) {
+        // 1) Verify token
+        const decoded = await promisify(jwt.verify)(req.cookies.jwt, process.env.JWT_SECRET);
+
+        // 2) Check if user still exists
+        const stillUser = await User.findById(decoded.id);
+        if (!stillUser) {
+            return next();
+        }
+
+        // 3) Check if user changed password after the token was issued
+        if (stillUser.changedPasswordAfterIssued(decoded.iat)) {
+            return next();
+        }
+
+        // Ok, there is a user logged in
+        res.locals.user = stillUser;
+        return next();
+    }
     next();
 });
 
