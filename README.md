@@ -55,10 +55,17 @@ Imagine you are going to build a Tour website (like Expedia), then many of your 
 ### Possible Improvements
 
 📌 Implement maximum login attempts
+
 📌 Prevent Cross-Site Request Forgery (using csurf package)
+
 📌 Require re-authentication before a high-value action
+
 📌 Implement a blacklist of untrusted JWT
+
 📌 Confirm user email address after first creating account
+
 📌 Keep user logged in with refresh tokens
+
 📌 Implement two-factor authentication
+
 📌 Build a front-end application
