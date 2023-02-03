@@ -10,7 +10,9 @@ Imagine you are going to build a Tour website (like Expedia), then many of your 
 ##### Feature-rich API w/ documentation
 
 ✅ Includes endpoints related to tours, users, reviews, authentication and authorization.
+
 ✅ Many customized features which helps business analyzation.
+
 ✅ More than 30 endpoints and usage are listed in a [detailed documentation](https://documenter.getpostman.com/view/25223323/2s935mrPtb#bd5e3ba3-952b-4117-8797-868456768c04).
 <br>
 
